@@ -32,6 +32,7 @@ import { ToolbarController } from '@theia/toolbar/lib/browser/toolbar-controller
 
 import { FormDialog, FormDialogField, NewPOU } from "../dialogs";
 import { ArraySetDialog } from "../dialogs/array-set-dialog";
+import { ImportExportXmlDialog } from "../dialogs/import-export-xml-dialog";
 
 const SampleSelectInputDialog: Command = {
     id: 'sample-command-select-input-dialog',
@@ -312,6 +313,11 @@ export namespace WasomeCommands {
     export const DIALOG_ARRAYSET = Command.toDefaultLocalizedCommand({
         id: "webide.dialog.arrayset",
         label: "数组设置弹窗"
+    });
+
+    export const DIALOG_IMPORT_EXPORT_XML = Command.toDefaultLocalizedCommand({
+        id: "webide.dialog.importExportXml",
+        label: "导入导出XML弹窗"
     });
 
     export const DIALOG_CONFIRM = Command.toDefaultLocalizedCommand({
@@ -845,6 +851,31 @@ export class SampleCommandContribution implements CommandContribution {
         commands.registerCommand(WasomeCommands.DIALOG_ARRAYSET, {
             execute: async (args) => {
                 const dialog = new ArraySetDialog({ initialValue: args?.initValue || [] });
+                const res = await dialog.open();
+                console.info('Array Set Dialog result:', res);
+                return res;
+            }
+        });
+        commands.registerCommand(WasomeCommands.DIALOG_IMPORT_EXPORT_XML, {
+            execute: async (args) => {
+                const treeData: any[] = [
+                    {
+                        label: 'C/C++', value: 'c_cpp', expanded: true, children: [
+                            {
+                                label: '哇哈哈哈和', value: 'dependence', children: [
+                                    { label: '三大的', value: 'include' },
+                                    { label: '萨的年萨和', value: 'source' }
+                                ]
+                            }
+                        ]
+                    },
+                    { label: '全局变量141', value: 'global' },
+                    { label: '自定义数据类型', value: 'custom' },
+                    { label: '示波器', value: 'scope' },
+                    { label: 'WP_CU01', value: 'wp_cu01' }
+                ];
+
+                const dialog = new ImportExportXmlDialog({ treeData });
                 const res = await dialog.open();
                 console.info('Array Set Dialog result:', res);
                 return res;
