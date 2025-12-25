@@ -9,18 +9,23 @@ interface TreeNode {
     children?: TreeNode[];
 }
 interface TreeDialogProps {
+    title: string;
     treeData: TreeNode[];
+    selectAllLabel?: string;
 }
 export class ImportExportXmlDialog extends ReactDialog<any> {
+    private selectAllLabel: string;
     state: any = {
+        conflict_rule: '', // 导入操作方式
         tree: [],
         allChecked: true, // 默认全选
         rootExpanded: false, // 根节点（全选）默认收起
     };
-
+    private propsTitle: string;
+    private error: string;
 
     constructor(props: TreeDialogProps) {
-        super({ title: '树形选择' });
+        super({ title: props.title });
         this.appendCloseButton('取消');
         this.appendAcceptButton('确定');
         this.state = {
@@ -28,6 +33,8 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
             allChecked: true, // 默认全选
             rootExpanded: false, // 默认收起
         };
+        this.propsTitle = props.title;
+        this.selectAllLabel = props.selectAllLabel || '全选';
         // 初始化时全选所有节点
         this.setAllChecked(this.state.tree, true);
         // 初始化时全部收起
@@ -240,9 +247,29 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
                         ref={el => { if (el) el.indeterminate = allIndeterminate; }}
                         onChange={this.handleAllCheck}
                     />
-                    <span>全选</span>
+                    <span>{this.selectAllLabel || '全选'}</span>
                 </div>
                 {this.state.rootExpanded && this.renderTree(this.state.tree)}
+                {/* 仅当 selectAllLabel 含有“导入”时显示下拉框 */}
+                {this.propsTitle.includes('导入') && (
+                    <div style={{ marginTop: 12 }}>
+                        <label htmlFor="import-action-select" style={{ marginRight: 8 }}>同名处理：</label>
+                        <select
+                            id="import-action-select"
+                            value={this.state.conflict_rule || 'merge'}
+                            onChange={e => {
+                                this.state.conflict_rule = e.target.value;
+                                this.update();
+                            }}
+                            style={{ minWidth: 120 }}
+                        >
+                            <option value="merge">覆盖合并</option>
+                            <option value="ignore">忽略</option>
+                            <option value="replace">重命名</option>
+                        </select>
+                    </div>
+                )}
+                <div style={{ color: 'red', marginTop: 8 }}>{this.error}</div>
             </div>
         );
     }
@@ -260,6 +287,24 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
     }
 
     protected override async accept(): Promise<void> {
+        const noneChecked = this.state.tree.every(
+            (node: any) => !node.checked && !this.isIndeterminate(node)
+        );
+        if (noneChecked) {
+            this.error = '请至少选择一个节点';
+            this.update();
+            return
+        }
+        // 代表导入
+        if (this.propsTitle.includes('导入')) {
+            if (!this.state.conflict_rule) {
+                this.error = '请选择同名处理方式';
+                this.update();
+                return;
+            }
+        }
+        this.error = '';
+        this.update();
         if (this.resolve) {
             // this.resolve(this.getCheckedValues(this.state.tree));
             this.resolve(this.state.tree);

@@ -858,26 +858,8 @@ export class SampleCommandContribution implements CommandContribution {
         });
         commands.registerCommand(WasomeCommands.DIALOG_IMPORT_EXPORT_XML, {
             execute: async (args) => {
-                const treeData: any[] = [
-                    {
-                        label: 'C/C++', value: 'c_cpp', expanded: true, children: [
-                            {
-                                label: '哇哈哈哈和', value: 'dependence', children: [
-                                    { label: '三大的', value: 'include' },
-                                    { label: '萨的年萨和', value: 'source' }
-                                ]
-                            }
-                        ]
-                    },
-                    { label: '全局变量141', value: 'global' },
-                    { label: '自定义数据类型', value: 'custom' },
-                    { label: '示波器', value: 'scope' },
-                    { label: 'WP_CU01', value: 'wp_cu01' }
-                ];
-
-                const dialog = new ImportExportXmlDialog({ treeData });
+                const dialog = new ImportExportXmlDialog(args);
                 const res = await dialog.open();
-                console.info('Array Set Dialog result:', res);
                 return res;
             }
         });
