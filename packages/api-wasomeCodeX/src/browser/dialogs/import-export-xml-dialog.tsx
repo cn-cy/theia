@@ -12,11 +12,12 @@ interface TreeDialogProps {
     title: string;
     treeData: TreeNode[];
     selectAllLabel?: string;
+    conflictRule?: string;
 }
 export class ImportExportXmlDialog extends ReactDialog<any> {
     private selectAllLabel: string;
     state: any = {
-        conflict_rule: '', // 导入操作方式
+        conflictRule: 'merge', // 导入操作方式
         tree: [],
         allChecked: true, // 默认全选
         rootExpanded: false, // 根节点（全选）默认收起
@@ -32,13 +33,20 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
             tree: props.treeData.map(node => ({ ...node })), // 深拷贝
             allChecked: true, // 默认全选
             rootExpanded: false, // 默认收起
+            conflictRule: props.conflictRule || 'merge', // 导入操作方式
         };
         this.propsTitle = props.title;
         this.selectAllLabel = props.selectAllLabel || '全选';
         // 初始化时全选所有节点
         this.setAllChecked(this.state.tree, true);
-        // 初始化时全部收起
-        this.setAllExpanded(this.state.tree, false);
+        // 只展开根节点（全选），其余全部收起
+        this.state.rootExpanded = true;
+        // 保证一级节点 expanded=false
+        if (this.state.tree && Array.isArray(this.state.tree)) {
+            for (const node of this.state.tree) {
+                node.expanded = false;
+            }
+        }
     }
     get value() {
         return this.state;
@@ -59,41 +67,43 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
     // 递归渲染树，支持半选
     renderTree(nodes: TreeNode[], parentIndex: string = '', level: number = 0): React.ReactNode {
         return (
-            <ul style={{ listStyle: 'none', paddingLeft: 16 }}>
+            <ul className='tree-ul'>
                 {nodes.map((node, idx) => {
                     const index = parentIndex + idx;
                     return (
                         <li key={index}>
-                            {/* 展开箭头或占位 */}
-                            <span
-                                style={{
-                                    display: 'inline-block',
-                                    width: 16,
-                                    marginRight: 4,
-                                    textAlign: 'center',
-                                    cursor: node.children && node.children.length > 0 ? 'pointer' : 'default',
-                                    userSelect: 'none',
-                                    transition: 'transform 0.2s',
-                                    transform: node.children && node.children.length > 0 && node.expanded ? 'rotate(90deg)' : 'rotate(0deg)'
-                                }}
-                                onClick={node.children && node.children.length > 0 ? () => this.toggleExpand(index) : undefined}
-                            >
-                                {node.children && node.children.length > 0 ? (
-                                    <svg width="12" height="12" viewBox="0 0 12 12" style={{ display: 'block', margin: '0 auto' }}>
-                                        <polygon points="3,2 9,6 3,10" fill="#888" />
-                                    </svg>
-                                ) : null}
-                            </span>
-                            <input
-                                type="checkbox"
-                                checked={!!node.checked}
-                                ref={el => {
-                                    if (el) el.indeterminate = this.isIndeterminate(node);
-                                }}
-                                onChange={() => this.toggleCheck(index)}
-                                style={{ verticalAlign: 'middle' }}
-                            />
-                            <span style={{ verticalAlign: 'middle' }}>{node.label}</span>
+                            <div className='tree-li-item'>
+                                {/* 展开箭头或占位 */}
+                                <span
+                                    style={{
+                                        display: 'inline-block',
+                                        width: 16,
+                                        marginRight: 4,
+                                        textAlign: 'center',
+                                        cursor: node.children && node.children.length > 0 ? 'pointer' : 'default',
+                                        userSelect: 'none',
+                                        transition: 'transform 0.2s',
+                                        transform: node.children && node.children.length > 0 && node.expanded ? 'rotate(90deg)' : 'rotate(0deg)'
+                                    }}
+                                    onClick={node.children && node.children.length > 0 ? () => this.toggleExpand(index) : undefined}
+                                >
+                                    {node.children && node.children.length > 0 ? (
+                                        <svg width="12" height="12" viewBox="0 0 12 12" style={{ display: 'block', margin: '0 auto' }}>
+                                            <polygon points="3,2 9,6 3,10" fill="#888" />
+                                        </svg>
+                                    ) : null}
+                                </span>
+                                <input
+                                    type="checkbox"
+                                    checked={!!node.checked}
+                                    ref={el => {
+                                        if (el) el.indeterminate = this.isIndeterminate(node);
+                                    }}
+                                    onChange={() => this.toggleCheck(index)}
+                                    style={{ verticalAlign: 'middle' }}
+                                />
+                                <span style={{ verticalAlign: 'middle' }}>{node.label}</span>
+                            </div>
                             {node.children && node.children.length > 0 && node.expanded && (
                                 <div>
                                     {this.renderTree(node.children, index + '-', level + 1)}
@@ -208,15 +218,6 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
         return result;
     }
 
-    // 展开/收起所有节点
-    handleExpandAll = (expand: boolean) => {
-        const tree = [...this.state.tree];
-        this.setAllExpanded(tree, expand);
-        this.state.tree = tree;
-        this.state.allExpanded = expand;
-        this.update();
-    };
-
     // 递归设置所有节点展开/收起
     setAllExpanded(nodes: TreeNode[], expanded: boolean) {
         for (const node of nodes) {
@@ -230,11 +231,12 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
         const allChecked = this.state.tree.every((node: any) => node.checked && !this.isIndeterminate(node));
         const allIndeterminate = !allChecked && this.state.tree.some((node: any) => node.checked || this.isIndeterminate(node));
         return (
-            <div style={{ minWidth: 400, minHeight: 300 }}>
-                <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div className='import-export-xml-wrapper'>
+                <div className='all-select'>
                     {/* 展开/收起箭头，放在全选左侧 */}
                     <span
-                        style={{ cursor: 'pointer', marginRight: 4, display: 'inline-block', width: 12, height: 12, userSelect: 'none', transition: 'transform 0.2s', transform: this.state.rootExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                        style={{ transform: this.state.rootExpanded ? 'rotate(90deg)' : 'rotate(0deg)' }}
+                        className='arrow'
                         onClick={this.handleRootExpand}
                     >
                         <svg width="12" height="12" viewBox="0 0 12 12" style={{ display: 'block' }}>
@@ -252,16 +254,16 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
                 {this.state.rootExpanded && this.renderTree(this.state.tree)}
                 {/* 仅当 selectAllLabel 含有“导入”时显示下拉框 */}
                 {this.propsTitle.includes('导入') && (
-                    <div style={{ marginTop: 12 }}>
-                        <label htmlFor="import-action-select" style={{ marginRight: 8 }}>同名处理：</label>
+                    <div className='import-action'>
+                        <label htmlFor="import-action-select" className='import-action-label'>同名处理</label>
                         <select
                             id="import-action-select"
-                            value={this.state.conflict_rule || 'merge'}
+                            value={this.state.conflictRule || 'merge'}
                             onChange={e => {
-                                this.state.conflict_rule = e.target.value;
+                                this.state.conflictRule = e.target.value;
                                 this.update();
                             }}
-                            style={{ minWidth: 120 }}
+                            className='import-action-select'
                         >
                             <option value="merge">覆盖合并</option>
                             <option value="ignore">忽略</option>
@@ -269,7 +271,7 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
                         </select>
                     </div>
                 )}
-                <div style={{ color: 'red', marginTop: 8 }}>{this.error}</div>
+                <div className='error'>{this.error}</div>
             </div>
         );
     }
@@ -297,7 +299,7 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
         }
         // 代表导入
         if (this.propsTitle.includes('导入')) {
-            if (!this.state.conflict_rule) {
+            if (!this.state.conflictRule) {
                 this.error = '请选择同名处理方式';
                 this.update();
                 return;
@@ -306,8 +308,8 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
         this.error = '';
         this.update();
         if (this.resolve) {
-            // this.resolve(this.getCheckedValues(this.state.tree));
-            this.resolve(this.state.tree);
+            const { tree, conflictRule } = this.state;
+            this.resolve({ tree, conflictRule });
         }
         this.dispose();
     }

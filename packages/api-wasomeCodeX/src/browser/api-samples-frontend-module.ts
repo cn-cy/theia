@@ -22,6 +22,8 @@ import { LogOnlyFileSystemWatcherErrorHandler } from './file-watching/log-only-f
 
 import '../../src/browser/style/branding.css';
 import '../../src/browser/style/dialogs.css'
+import '../../src/browser/style/importExportXml.css'
+
 import { DefaultLocaleFrontendContribution } from './view/default-locale-contribution';
 import { FrontendApplicationContribution } from '@theia/core/lib/browser/frontend-application-contribution';
 import { bindWebviewViewStabilityPatch } from './webview/webview-view-stability-patch';
