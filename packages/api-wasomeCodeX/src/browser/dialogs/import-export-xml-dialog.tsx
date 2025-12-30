@@ -208,24 +208,6 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
         this.update();
     };
 
-    // 获取所有选中的节点
-    getCheckedValues(nodes: TreeNode[]): string[] {
-        let result: string[] = [];
-        for (const node of nodes) {
-            if (node.checked) result.push(node.value);
-            if (node.children) result = result.concat(this.getCheckedValues(node.children));
-        }
-        return result;
-    }
-
-    // 递归设置所有节点展开/收起
-    setAllExpanded(nodes: TreeNode[], expanded: boolean) {
-        for (const node of nodes) {
-            node.expanded = expanded;
-            if (node.children) this.setAllExpanded(node.children, expanded);
-        }
-    }
-
     protected render(): React.ReactNode {
         // 全选半选逻辑：只要有子节点没全选就半选
         const allChecked = this.state.tree.every((node: any) => node.checked && !this.isIndeterminate(node));
@@ -274,18 +256,6 @@ export class ImportExportXmlDialog extends ReactDialog<any> {
                 <div className='error'>{this.error}</div>
             </div>
         );
-    }
-
-    // 判断所有节点是否都展开
-    isAllExpanded(nodes: TreeNode[]): boolean {
-        for (const node of nodes) {
-            if (node.children && node.children.length > 0) {
-                if (!node.expanded || !this.isAllExpanded(node.children)) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
 
     protected override async accept(): Promise<void> {
